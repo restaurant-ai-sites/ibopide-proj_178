@@ -2,7 +2,7 @@
   "restaurant": {
     "name": "ibopide",
     "tagline": "Genussvolle türkische Spezialitäten erleben",
-    "about": "Willkommen im ibopide, Ihrem Restaurant für authentische türkische Küche in Bönen. Bei uns erwarten Sie köstliche Türk Pide, saftige Kebaps und eine Vielzahl an Pizza-Variationen. An Wochenenden und Feiertagen verwöhnen wir Sie mit einem reichhaltigen offenen Frühstücksbuffet, das keine Wünsche offenlässt. Für besondere Anlässe und Firmenfeiern steht Ihnen unser reservierbarer zweiter Stock zur Verfügung. Besuchen Sie uns und genießen Sie die herzliche Atmosphäre und die Vielfalt unserer Speisen.",
+    "about": "Willkommen im ibopide, Ihrem Restaurant für authentische türkische Küche in Bönen. Wir bieten eine Vielzahl an köstlichen Pide-Variationen, saftigen Kebaps und eine reichhaltige Auswahl an traditionellen Frühstücksgerichten im offenen Büfett an Wochenenden und Feiertagen. Unser gemütliches Ambiente und die herzliche Gastfreundschaft laden zum Verweilen ein. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Besuchen Sie uns und lassen Sie sich von unseren kulinarischen Köstlichkeiten verwöhnen!",
     "phone": "01622913445",
     "email": "",
     "address": "Bahnhofstrasse 47 Bönen",
@@ -20,17 +20,23 @@
   },
   "seo": {
     "title": "ibopide - Türkische Spezialitäten in Bönen",
-    "description": "Entdecken Sie im ibopide köstliche türkische Pide, Kebaps und ein offenes Frühstücksbuffet in Bönen."
+    "description": "Entdecken Sie im ibopide in Bönen köstliche türkische Pide, Kebap und ein reichhaltiges Frühstücksbüfett. Reservieren Sie jetzt!"
   },
   "content": {
     "welcomeHeading": "Herzlich Willkommen im ibopide",
-    "welcomeSubtext": "Genießen Sie unsere türkischen Köstlichkeiten in gemütlicher Atmosphäre.",
-    "reservationCta": "Jetzt Tisch reservieren",
+    "welcomeSubtext": "Genießen Sie die Vielfalt der türkischen Küche.",
+    "reservationCta": "Jetzt reservieren",
     "orderCta": "Bestellen Sie jetzt",
     "contactHeading": "Kontaktieren Sie uns",
-    "footerText": "Ihr Geschmackserlebnis in Bönen."
+    "footerText": "Wir freuen uns auf Ihren Besuch!"
   },
-  "images": {},
+  "images": {
+    "hero": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/hero-1782915239672.png",
+    "about": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/about-1782915278272.png",
+    "gallery_1": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/gallery_1-1782915285041.png",
+    "gallery_2": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/gallery_2-1782915288838.jpg",
+    "gallery_3": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/gallery_3-1782915293991.png"
+  },
   "features": {
     "hasReservation": true,
     "hasOrdering": false,
