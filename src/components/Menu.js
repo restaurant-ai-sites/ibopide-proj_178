@@ -21,7 +21,7 @@ function MenuItem({ item }) {
 
 export default function Menu() {
   const sections = Array.isArray(siteData.menu) ? siteData.menu : [];
-  const foodImage = siteData.images.food;
+  const foodImage = siteData.images.food || siteData.images.gallery_1;
 
   if (sections.length === 0 && !foodImage) return null;
 

@@ -1,8 +1,8 @@
 {
   "restaurant": {
     "name": "ibopide",
-    "tagline": "Genussvolle türkische Spezialitäten erleben",
-    "about": "Willkommen im ibopide, Ihrem Restaurant für authentische türkische Küche in Bönen. Wir bieten eine Vielzahl an köstlichen Pide-Variationen, saftigen Kebaps und eine reichhaltige Auswahl an traditionellen Frühstücksgerichten im offenen Büfett an Wochenenden und Feiertagen. Unser gemütliches Ambiente und die herzliche Gastfreundschaft laden zum Verweilen ein. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Besuchen Sie uns und lassen Sie sich von unseren kulinarischen Köstlichkeiten verwöhnen!",
+    "tagline": "Genießen Sie authentische türkische Küche",
+    "about": "Willkommen im ibopide, Ihrem Ziel für köstliche türkische Spezialitäten in Bönen. Unser Restaurant bietet eine Vielzahl von traditionellen Pide-Variationen, herzhaften Kebaps und ein reichhaltiges Frühstücksbuffet an Wochenenden und Feiertagen. Bei uns erleben Sie die Vielfalt der türkischen Küche in einem einladenden Ambiente. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Kommen Sie vorbei und lassen Sie sich von unseren kulinarischen Köstlichkeiten verwöhnen!",
     "phone": "01622913445",
     "email": "",
     "address": "Bahnhofstrasse 47 Bönen",
@@ -20,15 +20,15 @@
   },
   "seo": {
     "title": "ibopide - Türkische Spezialitäten in Bönen",
-    "description": "Entdecken Sie im ibopide in Bönen köstliche türkische Pide, Kebap und ein reichhaltiges Frühstücksbüfett. Reservieren Sie jetzt!"
+    "description": "Entdecken Sie die Vielfalt der türkischen Küche im ibopide. Pide, Kebap und Frühstücksbuffet warten auf Sie!"
   },
   "content": {
-    "welcomeHeading": "Herzlich Willkommen im ibopide",
-    "welcomeSubtext": "Genießen Sie die Vielfalt der türkischen Küche.",
+    "welcomeHeading": "Willkommen im ibopide!",
+    "welcomeSubtext": "Erleben Sie türkische Köstlichkeiten in Bönen.",
     "reservationCta": "Jetzt reservieren",
-    "orderCta": "Bestellen Sie jetzt",
+    "orderCta": "Jetzt bestellen",
     "contactHeading": "Kontaktieren Sie uns",
-    "footerText": "Wir freuen uns auf Ihren Besuch!"
+    "footerText": "Besuchen Sie uns in Bönen!"
   },
   "images": {
     "hero": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/hero-1782915239672.png",
