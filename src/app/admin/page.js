@@ -70,6 +70,7 @@ export default function AdminPage() {
           ["einstellungen", "⚙️ Einstellungen"],
           ["tische", "🪑 Tische"],
           ["kategorien", "🏷 Kategorien"],
+          ["speisekarte", "🍽 Speisekarte"],
           ["bilder", "🖼 Bilder"],
           ["support", "💬 Support"],
         ].map(([id, label]) => (
@@ -85,6 +86,7 @@ export default function AdminPage() {
       {tab === "tische" && <TablesTab adminKey={adminKey} />}
       {tab === "reservierungen" && <ReservationsTab adminKey={adminKey} />}
       {tab === "kategorien" && <KategorienTab adminKey={adminKey} />}
+      {tab === "speisekarte" && <SpeisenkarteTab adminKey={adminKey} />}
       {tab === "bilder" && <BilderTab adminKey={adminKey} />}
       {tab === "support" && <SupportTab adminKey={adminKey} />}
     </main>
@@ -831,6 +833,368 @@ function ReservationsTab({ adminKey }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function SpeisenkarteTab({ adminKey }) {
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [scanUrl, setScanUrl] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState("");
+  const [newSectionName, setNewSectionName] = useState("");
+  const [expandedSection, setExpandedSection] = useState(null);
+  const [newItem, setNewItem] = useState({ sectionId: null, name: "", description: "", price: "" });
+  const [msg, setMsg] = useState("");
+  const itemFileRefs = useRef({});
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [galleryRes, menuRes] = await Promise.all([
+        api("/api/admin/menu/gallery", adminKey),
+        api("/api/admin/menu", adminKey),
+      ]);
+      setGalleryImages(galleryRes.images || []);
+      setSections(menuRes.sections || []);
+    } catch (e) {
+      setMsg("Ladefehler: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [adminKey]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function toggleGallery(key, current) {
+    await fetch(`/api/admin/menu/gallery?key=${encodeURIComponent(key)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+      body: JSON.stringify({ in_menu_gallery: !current }),
+    });
+    setGalleryImages((p) =>
+      p.map((img) => img.image_key === key ? { ...img, in_menu_gallery: !current } : img)
+    );
+  }
+
+  async function runScan() {
+    if (!scanUrl) return;
+    setScanning(true);
+    setScanMsg("");
+    try {
+      const data = await api("/api/admin/menu/scan", adminKey, {
+        method: "POST",
+        body: JSON.stringify({ image_url: scanUrl }),
+      });
+      setScanMsg(`✓ ${data.sections} Abschnitte, ${data.items} Gerichte importiert.`);
+      setScanUrl("");
+      await loadAll();
+    } catch (e) {
+      setScanMsg("Fehler: " + e.message);
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function addSection(e) {
+    e.preventDefault();
+    if (!newSectionName.trim()) return;
+    try {
+      const data = await api("/api/admin/menu", adminKey, {
+        method: "POST",
+        body: JSON.stringify({ type: "section", name: newSectionName.trim(), sort_order: sections.length }),
+      });
+      setSections((p) => [...p, { ...data.section, items: [] }]);
+      setNewSectionName("");
+      setExpandedSection(data.section?.id || null);
+    } catch (e) {
+      setMsg("Fehler: " + e.message);
+    }
+  }
+
+  async function deleteSection(id) {
+    if (!confirm("Diesen Abschnitt und alle enthaltenen Gerichte löschen?")) return;
+    await fetch(`/api/admin/menu?id=${id}&type=section`, {
+      method: "DELETE",
+      headers: { "x-admin-key": adminKey },
+    });
+    setSections((p) => p.filter((s) => s.id !== id));
+    if (expandedSection === id) setExpandedSection(null);
+  }
+
+  async function addItem(sectionId) {
+    if (!newItem.name.trim()) return;
+    try {
+      const data = await api("/api/admin/menu", adminKey, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "item",
+          section_id: sectionId,
+          name: newItem.name.trim(),
+          description: newItem.description.trim(),
+          price: newItem.price.trim(),
+          sort_order: sections.find((s) => s.id === sectionId)?.items?.length || 0,
+        }),
+      });
+      setSections((p) =>
+        p.map((s) => s.id === sectionId ? { ...s, items: [...(s.items || []), data.item] } : s)
+      );
+      setNewItem({ sectionId: null, name: "", description: "", price: "" });
+    } catch (e) {
+      setMsg("Fehler: " + e.message);
+    }
+  }
+
+  async function deleteItem(sectionId, itemId) {
+    await fetch(`/api/admin/menu?id=${itemId}&type=item`, {
+      method: "DELETE",
+      headers: { "x-admin-key": adminKey },
+    });
+    setSections((p) =>
+      p.map((s) => s.id === sectionId ? { ...s, items: s.items.filter((i) => i.id !== itemId) } : s)
+    );
+  }
+
+  async function uploadItemImage(sectionId, item, file) {
+    setMsg("");
+    const fd = new FormData();
+    fd.append("item_id", item.id);
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/admin/menu", {
+        method: "POST",
+        headers: { "x-admin-key": adminKey },
+        body: fd,
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setSections((p) =>
+        p.map((s) =>
+          s.id === sectionId
+            ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, image_url: d.url } : i) }
+            : s
+        )
+      );
+      setMsg("✓ Bild hochgeladen!");
+    } catch (e) {
+      setMsg("Fehler: " + e.message);
+    }
+  }
+
+  if (loading) return <p className="mt-8 text-coffee/50 text-sm">Lädt…</p>;
+
+  return (
+    <div className="mt-8 space-y-10">
+      {msg && (
+        <p className="text-sm px-3 py-2 border rounded bg-green-50 border-green-200 text-green-700">{msg}</p>
+      )}
+
+      {/* 1. Gallery */}
+      <div>
+        <h3 className="text-sm font-semibold text-coffee mb-1">Galerie (Foodfotos)</h3>
+        <p className="text-xs text-coffee/50 mb-4">
+          Wähle Fotos, die oben in der Speisekarten-Galerie erscheinen sollen.
+          Fotos können im Tab „🖼 Bilder" hochgeladen werden.
+        </p>
+        {galleryImages.length === 0 ? (
+          <p className="text-sm text-coffee/40 border border-dashed border-coffee/15 rounded p-6 text-center">
+            Noch keine Fotos hochgeladen.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {galleryImages.map((img) => (
+              <button
+                key={img.image_key}
+                onClick={() => toggleGallery(img.image_key, img.in_menu_gallery)}
+                className={`relative rounded overflow-hidden border-2 transition ${
+                  img.in_menu_gallery ? "border-terra" : "border-transparent opacity-60 hover:opacity-100"
+                }`}
+                title={img.in_menu_gallery ? "In Galerie (klicken zum Entfernen)" : "Zur Galerie hinzufügen"}
+              >
+                <img src={img.url} alt={img.image_key} className="w-full aspect-square object-cover" />
+                {img.in_menu_gallery && (
+                  <div className="absolute top-1 right-1 bg-terra text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                    ✓
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 2. KI Scan */}
+      <div className="border border-coffee/10 rounded-lg p-4 bg-sand/20">
+        <h3 className="text-sm font-semibold text-coffee mb-1">🤖 KI-Menüscan</h3>
+        <p className="text-xs text-coffee/50 mb-3">
+          Lade ein Foto der Menükarte hoch (in „🖼 Bilder"), kopiere die URL und lass die KI
+          die Speisekarte automatisch erstellen.
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={scanUrl}
+            onChange={(e) => setScanUrl(e.target.value)}
+            placeholder="https://… (URL des Menükarten-Fotos)"
+            className={`${inputCls} text-sm flex-1`}
+          />
+          <button onClick={runScan} disabled={!scanUrl || scanning} className={`${btnCls} shrink-0`}>
+            {scanning ? "Scannt…" : "Scannen"}
+          </button>
+        </div>
+        {scanMsg && (
+          <p className={`mt-2 text-sm ${scanMsg.startsWith("✓") ? "text-green-700" : "text-red-700"}`}>
+            {scanMsg}
+          </p>
+        )}
+      </div>
+
+      {/* 3. Menu sections */}
+      <div>
+        <h3 className="text-sm font-semibold text-coffee mb-4">Speisekarte bearbeiten</h3>
+
+        {sections.length === 0 && (
+          <div className="border border-dashed border-coffee/15 rounded-lg py-10 text-center text-coffee/40 mb-4">
+            <p className="text-3xl mb-2">🍽</p>
+            <p className="text-sm">Noch keine Abschnitte. Füge einen hinzu oder nutze den KI-Scan.</p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {sections.map((section) => (
+            <div key={section.id} className="border border-coffee/15 rounded-lg">
+              {/* Section header */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <button
+                  onClick={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
+                  className="font-semibold text-coffee flex-1 text-left flex items-center gap-2"
+                >
+                  <span className="text-coffee/40">{expandedSection === section.id ? "▾" : "▸"}</span>
+                  {section.name}
+                  <span className="text-xs font-normal text-coffee/40 ml-1">
+                    ({section.items?.length || 0} Gerichte)
+                  </span>
+                </button>
+                <button onClick={() => deleteSection(section.id)}
+                  className="text-xs text-red-500 hover:underline ml-4">
+                  Löschen
+                </button>
+              </div>
+
+              {/* Items */}
+              {expandedSection === section.id && (
+                <div className="border-t border-coffee/10 px-4 py-4 space-y-3">
+                  {(section.items || []).map((item) => (
+                    <div key={item.id} className="flex gap-3 items-start border border-coffee/10 rounded p-3">
+                      {/* Photo */}
+                      <div className="shrink-0">
+                        {item.image_url ? (
+                          <div className="relative group cursor-pointer"
+                            onClick={() => itemFileRefs.current[item.id]?.click()}>
+                            <img src={item.image_url} alt={item.name}
+                              className="w-16 h-12 object-cover rounded" />
+                            <div className="absolute inset-0 bg-black/40 text-white text-xs flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition">
+                              Ändern
+                            </div>
+                          </div>
+                        ) : (
+                          <button onClick={() => itemFileRefs.current[item.id]?.click()}
+                            className="w-16 h-12 border-2 border-dashed border-coffee/20 rounded flex items-center justify-center text-coffee/30 hover:border-terra hover:text-terra text-lg transition">
+                            📷
+                          </button>
+                        )}
+                        <input type="file" accept="image/*" className="hidden"
+                          ref={(el) => { itemFileRefs.current[item.id] = el; }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadItemImage(section.id, item, f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-coffee">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-coffee/50 mt-0.5">{item.description}</p>
+                        )}
+                        {item.price && (
+                          <p className="text-xs text-terra font-semibold mt-1">{item.price}</p>
+                        )}
+                      </div>
+                      <button onClick={() => deleteItem(section.id, item.id)}
+                        className="text-red-400 hover:text-red-600 font-bold shrink-0 px-1">
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Add item form */}
+                  {newItem.sectionId === section.id ? (
+                    <div className="border border-terra/20 rounded p-3 space-y-2 bg-terra/5">
+                      <input
+                        value={newItem.name}
+                        onChange={(e) => setNewItem((p) => ({ ...p, name: e.target.value }))}
+                        placeholder="Gerichtname *"
+                        className={`${inputCls} text-sm`}
+                        autoFocus
+                      />
+                      <input
+                        value={newItem.description}
+                        onChange={(e) => setNewItem((p) => ({ ...p, description: e.target.value }))}
+                        placeholder="Beschreibung (optional)"
+                        className={`${inputCls} text-sm`}
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          value={newItem.price}
+                          onChange={(e) => setNewItem((p) => ({ ...p, price: e.target.value }))}
+                          placeholder="Preis (z.B. 12,90 €)"
+                          className={`${inputCls} text-sm`}
+                        />
+                        <button
+                          onClick={() => addItem(section.id)}
+                          disabled={!newItem.name.trim()}
+                          className={`${btnCls} shrink-0`}
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => setNewItem({ sectionId: null, name: "", description: "", price: "" })}
+                          className="px-3 text-sm text-coffee/50 hover:text-coffee"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setNewItem({ sectionId: section.id, name: "", description: "", price: "" })}
+                      className="text-sm text-terra hover:underline"
+                    >
+                      + Gericht hinzufügen
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add section */}
+        <form onSubmit={addSection} className="mt-4 flex gap-2">
+          <input
+            value={newSectionName}
+            onChange={(e) => setNewSectionName(e.target.value)}
+            placeholder="Neuer Abschnitt (z.B. Vorspeisen, Hauptgerichte…)"
+            className={`${inputCls} text-sm flex-1`}
+          />
+          <button disabled={!newSectionName.trim()} className={`${btnCls} shrink-0`}>
+            + Abschnitt
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
