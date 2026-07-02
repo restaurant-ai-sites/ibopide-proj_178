@@ -1,8 +1,8 @@
 {
   "restaurant": {
     "name": "ibopide",
-    "tagline": "Genießen Sie authentische türkische Küche",
-    "about": "Willkommen im ibopide, Ihrem Ziel für köstliche türkische Spezialitäten in Bönen. Unser Restaurant bietet eine Vielzahl von traditionellen Gerichten, darunter köstliche Pide, saftige Kebaps und ein reichhaltiges Frühstücksbuffet an Wochenenden und Feiertagen. Ob für einen entspannten Abend mit Freunden oder eine besondere Feier, wir laden Sie ein, bei uns zu speisen und die Vielfalt der türkischen Küche zu entdecken. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Besuchen Sie uns und lassen Sie sich von unserem freundlichen Team verwöhnen!",
+    "tagline": "Genussvolle türkische Spezialitäten erleben",
+    "about": "Willkommen im ibopide, Ihrem Restaurant für authentische türkische Küche in Bönen. Bei uns erwarten Sie köstliche Pide, saftige Kebaps und ein reichhaltiges Frühstücksbuffet an Wochenenden und Feiertagen. Genießen Sie unsere vielfältigen Gerichte in einem einladenden Ambiente. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Besuchen Sie uns und lassen Sie sich von der türkischen Gastfreundschaft verwöhnen.",
     "phone": "01622913445",
     "email": "",
     "address": "Bahnhofstrasse 47 Bönen",
@@ -20,15 +20,15 @@
   },
   "seo": {
     "title": "ibopide – Türkische Spezialitäten in Bönen",
-    "description": "Entdecken Sie die Vielfalt der türkischen Küche im ibopide. Pide, Kebap und ein reichhaltiges Frühstücksbuffet warten auf Sie!"
+    "description": "Entdecken Sie im ibopide köstliche türkische Pide, Kebaps und ein reichhaltiges Frühstücksbuffet. Besuchen Sie uns in Bönen!"
   },
   "content": {
-    "welcomeHeading": "Herzlich Willkommen im ibopide",
-    "welcomeSubtext": "Erleben Sie die Aromen der türkischen Küche.",
-    "reservationCta": "Jetzt Tisch reservieren",
-    "orderCta": "Bestellen Sie jetzt online",
+    "welcomeHeading": "Herzlich Willkommen im ibopide!",
+    "welcomeSubtext": "Genießen Sie authentische türkische Küche bei uns.",
+    "reservationCta": "Jetzt Reservieren",
+    "orderCta": "Bestellen Sie jetzt",
     "contactHeading": "Kontaktieren Sie uns",
-    "footerText": "Besuchen Sie uns in Bönen!"
+    "footerText": "Wir freuen uns auf Ihren Besuch!"
   },
   "images": {
     "hero": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/hero-1782915239672.png",
