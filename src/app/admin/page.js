@@ -21,6 +21,7 @@ function api(path, key, init = {}) {
 export default function AdminPage() {
   const [adminKey, setAdminKey] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [isMaster, setIsMaster] = useState(false);
   const [tab, setTab] = useState("reservierungen");
   const [error, setError] = useState("");
 
@@ -28,7 +29,8 @@ export default function AdminPage() {
     e.preventDefault();
     setError("");
     try {
-      await api("/api/admin/settings", adminKey);
+      const data = await api("/api/admin/settings", adminKey);
+      setIsMaster(data.isMasterAdmin || false);
       sessionStorage.setItem("adminKey", adminKey);
       setAuthed(true);
     } catch {
@@ -40,7 +42,7 @@ export default function AdminPage() {
     const saved = sessionStorage.getItem("adminKey");
     if (saved) {
       api("/api/admin/settings", saved)
-        .then(() => { setAdminKey(saved); setAuthed(true); })
+        .then((data) => { setAdminKey(saved); setIsMaster(data.isMasterAdmin || false); setAuthed(true); })
         .catch(() => sessionStorage.removeItem("adminKey"));
     }
   }, []);
@@ -86,7 +88,7 @@ export default function AdminPage() {
       {tab === "tische" && <TablesTab adminKey={adminKey} />}
       {tab === "reservierungen" && <ReservationsTab adminKey={adminKey} />}
       {tab === "kategorien" && <KategorienTab adminKey={adminKey} />}
-      {tab === "speisekarte" && <SpeisenkarteTab adminKey={adminKey} />}
+      {tab === "speisekarte" && <SpeisenkarteTab adminKey={adminKey} isMasterAdmin={isMaster} />}
       {tab === "bilder" && <BilderTab adminKey={adminKey} />}
       {tab === "support" && <SupportTab adminKey={adminKey} />}
     </main>
@@ -103,12 +105,26 @@ const IMAGE_SLOTS = [
 
 function BilderTab({ adminKey }) {
   const [images, setImages] = useState({});
+  const [foodPhotos, setFoodPhotos] = useState([]);
   const [uploading, setUploading] = useState({});
+  const [foodUploading, setFoodUploading] = useState(false);
   const [msg, setMsg] = useState("");
+  const foodFileRef = useRef(null);
 
-  useEffect(() => {
-    api("/api/admin/images", adminKey).then((d) => setImages(d.images || {}));
-  }, [adminKey]);
+  function reloadAll() {
+    api("/api/admin/images", adminKey).then((d) => {
+      const imgs = d.images || {};
+      setImages(imgs);
+      setFoodPhotos(
+        Object.entries(imgs)
+          .filter(([k]) => k.startsWith("food_"))
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, url]) => ({ key: k, url }))
+      );
+    });
+  }
+
+  useEffect(() => { reloadAll(); }, [adminKey]);
 
   async function upload(slotKey, file) {
     setUploading((p) => ({ ...p, [slotKey]: true }));
@@ -140,15 +156,87 @@ function BilderTab({ adminKey }) {
       headers: { "x-admin-key": adminKey },
     });
     setImages((p) => { const n = { ...p }; delete n[slotKey]; return n; });
+    setFoodPhotos((p) => p.filter((f) => f.key !== slotKey));
+  }
+
+  async function uploadFoodPhoto(file) {
+    setFoodUploading(true);
+    setMsg("");
+    try {
+      const key = `food_${Date.now()}`;
+      const fd = new FormData();
+      fd.append("key", key);
+      fd.append("file", file);
+      const res = await fetch("/api/admin/images", {
+        method: "POST",
+        headers: { "x-admin-key": adminKey },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // Auto-mark as in_menu_gallery
+      await fetch(`/api/admin/menu/gallery?key=${encodeURIComponent(key)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ in_menu_gallery: true }),
+      });
+      setFoodPhotos((p) => [...p, { key, url: data.url }]);
+      setMsg("✓ Foto hinzugefügt und in Speisekarte-Galerie gespeichert!");
+    } catch (e) {
+      setMsg("Fehler: " + e.message);
+    } finally {
+      setFoodUploading(false);
+    }
   }
 
   return (
-    <div className="mt-8 space-y-4">
+    <div className="mt-8 space-y-6">
       {msg && <p className="text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded">{msg}</p>}
-      {IMAGE_SLOTS.map(({ key, label }) => (
-        <ImageSlot key={key} slotKey={key} label={label} url={images[key]}
-          uploading={!!uploading[key]} onUpload={(f) => upload(key, f)} onRemove={() => remove(key)} />
-      ))}
+
+      {/* Fixed image slots */}
+      <div className="space-y-4">
+        {IMAGE_SLOTS.map(({ key, label }) => (
+          <ImageSlot key={key} slotKey={key} label={label} url={images[key]}
+            uploading={!!uploading[key]} onUpload={(f) => upload(key, f)} onRemove={() => remove(key)} />
+        ))}
+      </div>
+
+      {/* Food / menu gallery photos */}
+      <div className="border-t border-coffee/10 pt-6">
+        <p className="text-sm font-medium text-coffee mb-1">📸 Foodfotos (Speisekarte-Galerie)</p>
+        <p className="text-xs text-coffee/50 mb-4">
+          Diese Fotos erscheinen in der Galerie auf der Speisekarte-Seite. Auswahl & Reihenfolge
+          können im Tab „🍽 Speisekarte" angepasst werden.
+        </p>
+
+        {foodPhotos.length > 0 && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-4">
+            {foodPhotos.map((f) => (
+              <div key={f.key} className="relative group">
+                <img src={f.url} alt={f.key}
+                  className="w-full aspect-square object-cover rounded border border-coffee/10" />
+                <button
+                  onClick={() => remove(f.key)}
+                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs items-center justify-center hidden group-hover:flex font-bold"
+                  title="Löschen"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => foodFileRef.current?.click()}
+          disabled={foodUploading}
+          className="w-full border-2 border-dashed border-coffee/20 py-6 text-sm text-coffee/50 hover:border-terra hover:text-terra rounded transition"
+        >
+          {foodUploading ? "Lädt hoch…" : "📁 Neues Foodfoto hinzufügen"}
+        </button>
+        <input ref={foodFileRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFoodPhoto(f); e.target.value = ""; }} />
+      </div>
     </div>
   );
 }
@@ -837,7 +925,7 @@ function ReservationsTab({ adminKey }) {
   );
 }
 
-function SpeisenkarteTab({ adminKey }) {
+function SpeisenkarteTab({ adminKey, isMasterAdmin }) {
   const [galleryImages, setGalleryImages] = useState([]);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -995,13 +1083,14 @@ function SpeisenkarteTab({ adminKey }) {
       <div>
         <h3 className="text-sm font-semibold text-coffee mb-1">Galerie (Foodfotos)</h3>
         <p className="text-xs text-coffee/50 mb-4">
-          Wähle Fotos, die oben in der Speisekarten-Galerie erscheinen sollen.
-          Fotos können im Tab „🖼 Bilder" hochgeladen werden.
+          Fotos hochladen: Tab „🖼 Bilder" → Abschnitt „Foodfotos".
+          Hier kannst du wählen, welche Fotos in der Speisekarten-Galerie erscheinen (✓ = sichtbar).
         </p>
         {galleryImages.length === 0 ? (
-          <p className="text-sm text-coffee/40 border border-dashed border-coffee/15 rounded p-6 text-center">
-            Noch keine Fotos hochgeladen.
-          </p>
+          <div className="border border-dashed border-coffee/15 rounded p-6 text-center text-coffee/40">
+            <p className="text-2xl mb-1">📷</p>
+            <p className="text-sm">Noch keine Foodfotos. Gehe zu „🖼 Bilder" → Foodfotos, um welche hochzuladen.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
             {galleryImages.map((img) => (
@@ -1009,46 +1098,48 @@ function SpeisenkarteTab({ adminKey }) {
                 key={img.image_key}
                 onClick={() => toggleGallery(img.image_key, img.in_menu_gallery)}
                 className={`relative rounded overflow-hidden border-2 transition ${
-                  img.in_menu_gallery ? "border-terra" : "border-transparent opacity-60 hover:opacity-100"
+                  img.in_menu_gallery ? "border-terra" : "border-transparent opacity-50 hover:opacity-80"
                 }`}
-                title={img.in_menu_gallery ? "In Galerie (klicken zum Entfernen)" : "Zur Galerie hinzufügen"}
+                title={img.in_menu_gallery ? "Sichtbar — klicken zum Ausblenden" : "Klicken zum Einblenden"}
               >
                 <img src={img.url} alt={img.image_key} className="w-full aspect-square object-cover" />
-                {img.in_menu_gallery && (
-                  <div className="absolute top-1 right-1 bg-terra text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                    ✓
-                  </div>
-                )}
+                <div className={`absolute top-1 right-1 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold transition ${
+                  img.in_menu_gallery ? "bg-terra text-white" : "bg-white/70 text-coffee/40"
+                }`}>
+                  {img.in_menu_gallery ? "✓" : "○"}
+                </div>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* 2. KI Scan */}
-      <div className="border border-coffee/10 rounded-lg p-4 bg-sand/20">
-        <h3 className="text-sm font-semibold text-coffee mb-1">🤖 KI-Menüscan</h3>
-        <p className="text-xs text-coffee/50 mb-3">
-          Lade ein Foto der Menükarte hoch (in „🖼 Bilder"), kopiere die URL und lass die KI
-          die Speisekarte automatisch erstellen.
-        </p>
-        <div className="flex gap-2">
-          <input
-            value={scanUrl}
-            onChange={(e) => setScanUrl(e.target.value)}
-            placeholder="https://… (URL des Menükarten-Fotos)"
-            className={`${inputCls} text-sm flex-1`}
-          />
-          <button onClick={runScan} disabled={!scanUrl || scanning} className={`${btnCls} shrink-0`}>
-            {scanning ? "Scannt…" : "Scannen"}
-          </button>
-        </div>
-        {scanMsg && (
-          <p className={`mt-2 text-sm ${scanMsg.startsWith("✓") ? "text-green-700" : "text-red-700"}`}>
-            {scanMsg}
+      {/* 2. KI Scan — nur für Master-Admin */}
+      {isMasterAdmin && (
+        <div className="border border-coffee/10 rounded-lg p-4 bg-sand/20">
+          <h3 className="text-sm font-semibold text-coffee mb-1">🤖 KI-Menüscan <span className="text-xs font-normal text-terra">(Master Admin)</span></h3>
+          <p className="text-xs text-coffee/50 mb-3">
+            Lade ein Foto der Menükarte in „🖼 Bilder" hoch, kopiere die URL und lass die KI
+            die Speisekarte automatisch erstellen.
           </p>
-        )}
-      </div>
+          <div className="flex gap-2">
+            <input
+              value={scanUrl}
+              onChange={(e) => setScanUrl(e.target.value)}
+              placeholder="https://… (URL des Menükarten-Fotos)"
+              className={`${inputCls} text-sm flex-1`}
+            />
+            <button onClick={runScan} disabled={!scanUrl || scanning} className={`${btnCls} shrink-0`}>
+              {scanning ? "Scannt…" : "Scannen"}
+            </button>
+          </div>
+          {scanMsg && (
+            <p className={`mt-2 text-sm ${scanMsg.startsWith("✓") ? "text-green-700" : "text-red-700"}`}>
+              {scanMsg}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 3. Menu sections */}
       <div>

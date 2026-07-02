@@ -1,24 +1,10 @@
 import { NextResponse } from "next/server";
 import { isAdmin, unauthorized } from "../../../../lib/admin";
 import { sb, PROJECT_ID } from "../../../../lib/booking";
-
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SB_KEY = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { uploadToStorage as _upload } from "../../../../lib/storage";
 
 async function uploadToStorage(path, file) {
-  const arrayBuffer = await file.arrayBuffer();
-  const res = await fetch(`${SB_URL}/storage/v1/object/site-images/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: SB_KEY,
-      Authorization: `Bearer ${SB_KEY}`,
-      "Content-Type": file.type || "application/octet-stream",
-      "x-upsert": "true",
-    },
-    body: arrayBuffer,
-  });
-  if (!res.ok) throw new Error(`Storage ${res.status}: ${await res.text()}`);
-  return `${SB_URL}/storage/v1/object/public/site-images/${path}`;
+  return _upload("site-images", path, file);
 }
 
 export async function GET(request) {

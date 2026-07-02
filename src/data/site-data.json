@@ -8,12 +8,12 @@
     "address": "Bahnhofstrasse 47 Bönen",
     "openingHours": {
       "Montag": "09:00-22:00",
-      "Dienstag": "09:00-22:00",
-      "Mittwoch": "09:00-22:00",
-      "Donnerstag": "09:00-22:00",
       "Freitag": "09:00-22:00",
       "Samstag": "09:00-22:00",
-      "Sonntag": "09:00-22:00"
+      "Sonntag": "09:00-22:00",
+      "Dienstag": "09:00-22:00",
+      "Mittwoch": "09:00-22:00",
+      "Donnerstag": "09:00-22:00"
     },
     "cuisine": "Türkische Spezialitäten",
     "priceRange": "mid"
@@ -23,12 +23,12 @@
     "description": "Entdecken Sie die Vielfalt der türkischen Küche im ibopide in Bönen. Pide, Kebap und ein reichhaltiges Frühstücksbuffet warten auf Sie."
   },
   "content": {
-    "welcomeHeading": "Willkommen im ibopide!",
-    "welcomeSubtext": "Genießen Sie unsere türkischen Köstlichkeiten.",
-    "reservationCta": "Jetzt Tisch reservieren",
-    "orderCta": "Essen bestellen",
-    "contactHeading": "Kontaktieren Sie uns",
-    "footerText": "Besuchen Sie uns in Bönen!"
+    "welcomeHeading": "",
+    "welcomeSubtext": "",
+    "reservationCta": "Tisch reservieren",
+    "orderCta": "Jetzt bestellen",
+    "contactHeading": "Kontakt",
+    "footerText": ""
   },
   "images": {
     "hero": "https://eqrjtsqkfaigpsyfpehl.supabase.co/storage/v1/object/public/site-images/proj_1782903542317_j516c/hero-1782915239672.png",

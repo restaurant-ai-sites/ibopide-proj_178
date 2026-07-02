@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { isAdmin, unauthorized } from "../../../../../lib/admin";
+import { isMasterAdmin, unauthorized } from "../../../../../lib/admin";
 import { sb, PROJECT_ID } from "../../../../../lib/booking";
 
 export async function POST(request) {
-  if (!isAdmin(request)) return unauthorized();
+  if (!isMasterAdmin(request)) return unauthorized();
 
   const { image_url } = await request.json().catch(() => ({}));
   if (!image_url)
