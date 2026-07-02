@@ -1,8 +1,8 @@
 {
   "restaurant": {
     "name": "ibopide",
-    "tagline": "Genussvolle türkische Spezialitäten erleben",
-    "about": "Willkommen im ibopide, Ihrem Ziel für authentische türkische Küche in Bönen. Unser Restaurant bietet eine Vielzahl von köstlichen Pide-Variationen, saftigen Kebaps und eine reichhaltige Auswahl an Frühstücksoptionen im offenen Buffet an Wochenenden und Feiertagen. Genießen Sie die herzliche Atmosphäre und lassen Sie sich von unseren Spezialitäten verwöhnen. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Besuchen Sie uns und erleben Sie den Geschmack der Türkei!",
+    "tagline": "Genießen Sie authentische türkische Küche",
+    "about": "Willkommen im ibopide, Ihrem Ziel für köstliche türkische Spezialitäten in Bönen. Unser Restaurant bietet eine Vielzahl von traditionellen Gerichten, darunter köstliche Pide, saftige Kebaps und ein reichhaltiges Frühstücksbuffet an Wochenenden und Feiertagen. Ob für einen entspannten Abend mit Freunden oder eine besondere Feier, wir laden Sie ein, bei uns zu speisen und die Vielfalt der türkischen Küche zu entdecken. Für besondere Anlässe und Firmenfeiern steht Ihnen unser zweiter Stock zur Verfügung. Besuchen Sie uns und lassen Sie sich von unserem freundlichen Team verwöhnen!",
     "phone": "01622913445",
     "email": "",
     "address": "Bahnhofstrasse 47 Bönen",
@@ -19,14 +19,14 @@
     "priceRange": "mid"
   },
   "seo": {
-    "title": "ibopide - Türkische Spezialitäten in Bönen",
-    "description": "Entdecken Sie im ibopide köstliche türkische Pide, Kebaps und ein reichhaltiges Frühstücksbuffet. Reservieren Sie jetzt!"
+    "title": "ibopide – Türkische Spezialitäten in Bönen",
+    "description": "Entdecken Sie die Vielfalt der türkischen Küche im ibopide. Pide, Kebap und ein reichhaltiges Frühstücksbuffet warten auf Sie!"
   },
   "content": {
-    "welcomeHeading": "Herzlich Willkommen im ibopide!",
-    "welcomeSubtext": "Genießen Sie authentische türkische Küche in Bönen.",
+    "welcomeHeading": "Herzlich Willkommen im ibopide",
+    "welcomeSubtext": "Erleben Sie die Aromen der türkischen Küche.",
     "reservationCta": "Jetzt Tisch reservieren",
-    "orderCta": "Bestellen Sie jetzt",
+    "orderCta": "Bestellen Sie jetzt online",
     "contactHeading": "Kontaktieren Sie uns",
     "footerText": "Besuchen Sie uns in Bönen!"
   },
