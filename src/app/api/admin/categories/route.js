@@ -3,7 +3,7 @@ import { isAdmin, unauthorized } from "../../../../lib/admin";
 import { sb, PROJECT_ID } from "../../../../lib/booking";
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SB_KEY = process.env.SUPABASE_SECRET_KEY;
+const SB_KEY = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 async function uploadCategoryImage(categoryId, file) {
   const ext = file.name?.split(".").pop() || "jpg";
@@ -12,6 +12,7 @@ async function uploadCategoryImage(categoryId, file) {
   const res = await fetch(`${SB_URL}/storage/v1/object/site-images/${path}`, {
     method: "POST",
     headers: {
+      apikey: SB_KEY,
       Authorization: `Bearer ${SB_KEY}`,
       "Content-Type": file.type || "application/octet-stream",
       "x-upsert": "true",
@@ -79,7 +80,7 @@ export async function PATCH(request) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id erforderlich." }, { status: 400 });
   const body = await request.json();
-  const allowed = ["name", "description", "image_url", "sort_order", "is_active"];
+  const allowed = ["name", "description", "image_url", "sort_order", "is_active", "available_days", "holiday_dates"];
   const update = {};
   for (const key of allowed) {
     if (key in body) update[key] = body[key];

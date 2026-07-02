@@ -352,6 +352,134 @@ function TablesTab({ adminKey }) {
   );
 }
 
+const DAY_CODES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_LABELS = { mon: "Mo", tue: "Di", wed: "Mi", thu: "Do", fri: "Fr", sat: "Sa", sun: "So" };
+
+function detectMode(days) {
+  if (!days || days.includes("all")) return "all";
+  const d = days.slice().sort().join(",");
+  if (d === "fri,mon,thu,tue,wed") return "weekdays";
+  if (d === "sat,sun") return "weekends";
+  return "custom";
+}
+
+function ScheduleSection({ cat, adminKey, onSaved }) {
+  const [mode, setMode] = useState(() => detectMode(cat.available_days));
+  const [customDays, setCustomDays] = useState(cat.available_days || []);
+  const [holidays, setHolidays] = useState(cat.holiday_dates || []);
+  const [newDate, setNewDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  function getDays() {
+    if (mode === "all") return ["all"];
+    if (mode === "weekdays") return ["mon", "tue", "wed", "thu", "fri"];
+    if (mode === "weekends") return ["sat", "sun"];
+    return customDays.length > 0 ? customDays : ["all"];
+  }
+
+  function toggleCustomDay(d) {
+    setCustomDays((p) => p.includes(d) ? p.filter((x) => x !== d) : [...p, d]);
+  }
+
+  function addHoliday() {
+    if (newDate && !holidays.includes(newDate)) {
+      setHolidays((p) => [...p, newDate].sort());
+      setNewDate("");
+    }
+  }
+
+  async function save() {
+    setSaving(true);
+    setMsg("");
+    try {
+      const days = getDays();
+      await fetch(`/api/admin/categories?id=${cat.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ available_days: days, holiday_dates: holidays }),
+      });
+      onSaved(cat.id, { available_days: days, holiday_dates: holidays });
+      setMsg("✓ Gespeichert");
+    } catch (e) {
+      setMsg("Fehler: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const presets = [
+    { id: "all", label: "Alle Tage" },
+    { id: "weekdays", label: "Mo – Fr" },
+    { id: "weekends", label: "Sa – So" },
+    { id: "custom", label: "Benutzerdefiniert" },
+  ];
+
+  return (
+    <div className="mt-4 border-t border-coffee/10 pt-4 space-y-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-coffee/50">Verfügbarkeit</p>
+
+      {/* Ön ayarlar */}
+      <div className="flex flex-wrap gap-2">
+        {presets.map((p) => (
+          <button key={p.id} onClick={() => setMode(p.id)}
+            className={`text-xs px-3 py-1 rounded-full border transition ${
+              mode === p.id ? "border-terra bg-terra/10 text-terra" : "border-coffee/20 text-coffee/60 hover:border-coffee/40"
+            }`}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Özel gün seçimi */}
+      {mode === "custom" && (
+        <div className="flex flex-wrap gap-2">
+          {DAY_CODES.map((d) => (
+            <button key={d} onClick={() => toggleCustomDay(d)}
+              className={`w-10 h-10 text-xs rounded-full border transition ${
+                customDays.includes(d) ? "border-terra bg-terra text-cream" : "border-coffee/20 text-coffee/60 hover:border-coffee/40"
+              }`}>
+              {DAY_LABELS[d]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Özel tarihler (tatil günleri) */}
+      <div>
+        <p className="text-xs text-coffee/60 mb-2">Feiertage &amp; besondere Daten</p>
+        <div className="flex gap-2">
+          <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
+            className="border border-coffee/20 bg-cream px-2 py-1.5 text-xs flex-1 outline-none focus:border-terra" />
+          <button onClick={addHoliday} disabled={!newDate}
+            className="px-3 py-1.5 text-xs bg-terra text-cream hover:bg-terradark disabled:opacity-40">
+            + Hinzufügen
+          </button>
+        </div>
+        {holidays.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {holidays.map((d) => (
+              <span key={d} className="flex items-center gap-1 text-xs bg-coffee/8 border border-coffee/15 px-2 py-0.5 rounded-full">
+                {new Date(d + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" })}
+                <button onClick={() => setHolidays((p) => p.filter((x) => x !== d))}
+                  className="text-red-400 hover:text-red-600 ml-0.5 font-bold">×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button onClick={save} disabled={saving}
+          className="text-xs px-4 py-2 bg-terra text-cream hover:bg-terradark disabled:opacity-40">
+          {saving ? "…" : "Speichern"}
+        </button>
+        {msg && <span className="text-xs text-green-700">{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
 function KategorienTab({ adminKey }) {
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -359,6 +487,7 @@ function KategorienTab({ adminKey }) {
   const [newDesc, setNewDesc] = useState("");
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState("");
+  const [expandedSchedule, setExpandedSchedule] = useState(null);
   const fileRefs = useRef({});
 
   const load = useCallback(
@@ -442,6 +571,15 @@ function KategorienTab({ adminKey }) {
     ]);
   }
 
+  function scheduleLabel(cat) {
+    const days = cat.available_days || ["all"];
+    const holidays = cat.holiday_dates || [];
+    const mode = detectMode(days);
+    const base = mode === "all" ? "Alle Tage" : mode === "weekdays" ? "Mo–Fr" : mode === "weekends" ? "Sa–So"
+      : days.map((d) => DAY_LABELS[d] || d).join(", ");
+    return holidays.length > 0 ? `${base} + ${holidays.length} Feiertag(e)` : base;
+  }
+
   if (loading) return <p className="mt-8 text-coffee/50 text-sm">Lädt…</p>;
 
   return (
@@ -454,52 +592,52 @@ function KategorienTab({ adminKey }) {
         (z. B. Frühstück, Grillabend, Abendessen). Die Kategorie wird der Reservierung beigefügt.
       </p>
 
-      {/* Mevcut kategoriler */}
       <div className="space-y-3">
         {cats.map((cat, idx) => (
           <div key={cat.id} className={`border rounded-lg p-4 ${cat.is_active ? "border-coffee/15" : "border-coffee/10 opacity-60"}`}>
             <div className="flex items-start gap-4">
-              {/* Fotoğraf */}
               <div className="shrink-0">
                 {cat.image_url ? (
                   <div className="relative group">
                     <img src={cat.image_url} alt={cat.name}
                       className="h-20 w-28 object-cover rounded border border-coffee/10" />
-                    <button
-                      onClick={() => fileRefs.current[cat.id]?.click()}
+                    <button onClick={() => fileRefs.current[cat.id]?.click()}
                       className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition">
                       Ersetzen
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => fileRefs.current[cat.id]?.click()}
+                  <button onClick={() => fileRefs.current[cat.id]?.click()}
                     className="h-20 w-28 border-2 border-dashed border-coffee/20 rounded flex flex-col items-center justify-center text-coffee/40 hover:border-terra hover:text-terra transition text-xs gap-1">
                     <span className="text-2xl">📷</span>
                     <span>Foto hinzufügen</span>
                   </button>
                 )}
-                <input
-                  type="file" accept="image/*" className="hidden"
+                <input type="file" accept="image/*" className="hidden"
                   ref={(el) => { fileRefs.current[cat.id] = el; }}
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(cat, f); e.target.value = ""; }}
                 />
               </div>
 
-              {/* Bilgiler */}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-coffee">{cat.name}</p>
                 {cat.description && (
                   <p className="text-sm text-coffee/60 mt-0.5 truncate">{cat.description}</p>
                 )}
+                <p className="text-xs text-coffee/40 mt-1">📅 {scheduleLabel(cat)}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <button onClick={() => toggle(cat)}
                     className={`text-xs px-2.5 py-1 rounded border transition ${
-                      cat.is_active
-                        ? "border-green-300 bg-green-50 text-green-700"
-                        : "border-coffee/20 text-coffee/50"
+                      cat.is_active ? "border-green-300 bg-green-50 text-green-700" : "border-coffee/20 text-coffee/50"
                     }`}>
                     {cat.is_active ? "✓ Aktiv" : "Inaktiv"}
+                  </button>
+                  <button
+                    onClick={() => setExpandedSchedule(expandedSchedule === cat.id ? null : cat.id)}
+                    className={`text-xs px-2.5 py-1 rounded border transition ${
+                      expandedSchedule === cat.id ? "border-terra bg-terra/10 text-terra" : "border-coffee/20 text-coffee/60 hover:border-coffee/40"
+                    }`}>
+                    📅 Verfügbarkeit
                   </button>
                   <div className="flex gap-1">
                     <button onClick={() => saveOrder(cat.id, -1)} disabled={idx === 0}
@@ -507,11 +645,17 @@ function KategorienTab({ adminKey }) {
                     <button onClick={() => saveOrder(cat.id, 1)} disabled={idx === cats.length - 1}
                       className="px-2 py-1 border border-coffee/15 rounded text-xs hover:bg-coffee/5 disabled:opacity-30">▼</button>
                   </div>
-                  <button onClick={() => remove(cat.id)}
-                    className="text-xs text-red-600 hover:underline ml-auto">
+                  <button onClick={() => remove(cat.id)} className="text-xs text-red-600 hover:underline ml-auto">
                     Löschen
                   </button>
                 </div>
+                {expandedSchedule === cat.id && (
+                  <ScheduleSection
+                    cat={cat}
+                    adminKey={adminKey}
+                    onSaved={(id, data) => setCats((p) => p.map((c) => c.id === id ? { ...c, ...data } : c))}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -524,7 +668,6 @@ function KategorienTab({ adminKey }) {
         )}
       </div>
 
-      {/* Yeni kategori ekleme */}
       <div className="border-t border-coffee/10 pt-6">
         <h3 className="text-sm font-semibold text-coffee mb-4">Neue Kategorie hinzufügen</h3>
         <form onSubmit={addCategory} className="space-y-3 max-w-md">

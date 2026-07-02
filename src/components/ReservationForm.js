@@ -6,8 +6,9 @@ const inputCls =
   "w-full border border-coffee/20 bg-cream px-4 py-3 text-coffee outline-none transition-colors focus:border-terra";
 
 export default function ReservationForm() {
-  // step: category → form → code → done
+  // date_party → category (eğer varsa) → form → code → done
   const [step, setStep] = useState("loading");
+  const [hasCategories, setHasCategories] = useState(false);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [date, setDate] = useState("");
@@ -28,19 +29,19 @@ export default function ReservationForm() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Kategorileri yükle; aktif kategoriler varsa category adımından başla
+  // İlk yükleme: kategori var mı kontrol et
   useEffect(() => {
     fetch("/api/reservations/categories")
       .then((r) => r.json())
       .then((d) => {
         const active = (d.categories || []).filter((c) => c.is_active);
-        setCategories(active);
-        setStep(active.length > 0 ? "category" : "form");
+        setHasCategories(active.length > 0);
+        setStep(active.length > 0 ? "date_party" : "form");
       })
       .catch(() => setStep("form"));
   }, []);
 
-  async function loadSlots(d, p) {
+  async function loadSlotsForDate(d, p) {
     setSlots(null);
     setTime("");
     setClosed(false);
@@ -53,6 +54,35 @@ export default function ReservationForm() {
     const data = await res.json();
     if (data.closed) setClosed(true);
     setSlots(data.slots || []);
+  }
+
+  async function proceedFromDateParty() {
+    if (!date) return;
+    await loadSlotsForDate(date, party);
+
+    if (hasCategories) {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/reservations/categories?date=${date}`);
+        const data = await res.json();
+        const active = (data.categories || []).filter((c) => c.is_active);
+        setCategories(active);
+        setSelectedCategory(null);
+        setStep(active.length > 0 ? "category" : "form");
+      } catch {
+        setStep("form");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setStep("form");
+    }
+  }
+
+  async function handleFormDateChange(newDate) {
+    setDate(newDate);
+    setTime("");
+    loadSlotsForDate(newDate, party);
   }
 
   async function submitRequest(e) {
@@ -124,10 +154,7 @@ export default function ReservationForm() {
           })}{" "}
           um {confirmation.time} Uhr
           {confirmation.tableNumber && (
-            <>
-              <br />
-              Tisch {confirmation.tableNumber}
-            </>
+            <><br />Tisch {confirmation.tableNumber}</>
           )}
         </p>
         <p className="mt-6 text-sm text-coffee/60">Wir freuen uns auf Ihren Besuch!</p>
@@ -170,14 +197,50 @@ export default function ReservationForm() {
     );
   }
 
+  // Tarih & Kişi seçimi (kategori olan projeler için ilk adım)
+  if (step === "date_party") {
+    return (
+      <div className="mt-12 space-y-6">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm text-coffee/70">Datum *</span>
+            <input
+              type="date" required min={today} value={date} className={inputCls}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm text-coffee/70">Personen *</span>
+            <select value={party} className={inputCls} onChange={(e) => setParty(Number(e.target.value))}>
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>{n} {n === 1 ? "Person" : "Personen"}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          onClick={proceedFromDateParty}
+          disabled={!date || loading}
+          className="w-full bg-terra py-4 text-sm uppercase tracking-widest text-cream transition-colors hover:bg-terradark disabled:opacity-40"
+        >
+          {loading ? "Lädt…" : "Weiter →"}
+        </button>
+      </div>
+    );
+  }
+
+  // Kategori seçimi (tarihe göre filtrelenmiş)
   if (step === "category") {
+    const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("de-DE", {
+      weekday: "long", day: "numeric", month: "long",
+    });
     return (
       <div className="mt-12">
         <h2 className="text-center font-display text-2xl font-semibold text-coffee">
           Was planen Sie?
         </h2>
         <p className="mt-2 text-center text-sm text-coffee/60">
-          Wählen Sie die Art Ihres Besuchs aus.
+          Verfügbare Angebote für {dateLabel}
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat) => (
@@ -213,13 +276,22 @@ export default function ReservationForm() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => { setSelectedCategory(null); setStep("form"); }}
-          className="mt-6 w-full text-sm text-coffee/50 underline underline-offset-4 hover:text-coffee"
-        >
-          Ohne Angabe weiter →
-        </button>
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={() => { setSelectedCategory(null); setStep("form"); }}
+            className="text-sm text-coffee/50 underline underline-offset-4 hover:text-coffee"
+          >
+            Ohne Angabe weiter →
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep("date_party")}
+            className="text-sm text-coffee/40 hover:text-coffee"
+          >
+            ← Datum ändern
+          </button>
+        </div>
       </div>
     );
   }
@@ -227,7 +299,6 @@ export default function ReservationForm() {
   // step === "form"
   return (
     <form onSubmit={submitRequest} className="mt-12 space-y-5">
-      {/* Seçilen kategori etiketi */}
       {selectedCategory && (
         <div className="flex items-center justify-between rounded border border-terra/20 bg-terra/5 px-4 py-3">
           <span className="text-sm font-medium text-terra">{selectedCategory.name}</span>
@@ -248,14 +319,14 @@ export default function ReservationForm() {
           <span className="mb-1 block text-sm text-coffee/70">Datum *</span>
           <input
             type="date" required min={today} value={date} className={inputCls}
-            onChange={(e) => { setDate(e.target.value); loadSlots(e.target.value, party); }}
+            onChange={(e) => handleFormDateChange(e.target.value)}
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm text-coffee/70">Personen *</span>
           <select
             value={party} className={inputCls}
-            onChange={(e) => { setParty(Number(e.target.value)); loadSlots(date, Number(e.target.value)); }}
+            onChange={(e) => { setParty(Number(e.target.value)); loadSlotsForDate(date, Number(e.target.value)); }}
           >
             {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>{n} {n === 1 ? "Person" : "Personen"}</option>
